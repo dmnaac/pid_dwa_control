@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <string>
 
-#include "dwa_planner.h"
+#include "pid_dwa_control/dwa_planner.h"
 
 void DWA_planner::load_params()
 {
