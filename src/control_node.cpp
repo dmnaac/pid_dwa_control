@@ -1,0 +1,14 @@
+#include "following_controller/following_controller.h"
+
+int main(int argc, char **argv)
+{
+    ros::init(argc, argv, "mono_controller_node");
+    following_controller follower;
+    ros::Rate loop_rate(10);
+    while (ros::ok())
+    {
+        follower.spin();
+        loop_rate.sleep();
+    }
+    return 0;
+}
