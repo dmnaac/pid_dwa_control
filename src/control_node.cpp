@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "mono_controller_node");
+    ros::init(argc, argv, "pid_dwa_control_node");
     following_controller follower;
     ros::Rate loop_rate(10);
     while (ros::ok())
