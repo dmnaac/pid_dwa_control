@@ -8,6 +8,7 @@ namespace FOLLOWING
     private:
         /* data */
     public:
+        Cost();
         Cost(const float obs_cost, const float goal_cost, const float direction_cost, const float speed_cost, const float path_cost, const float total_cost);
         ~Cost();
 

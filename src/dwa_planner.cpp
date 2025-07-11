@@ -8,7 +8,7 @@ namespace FOLLOWING
 {
     DWA_planner::DWA_planner()
     {
-        load_params();
+        DWA_planner::load_params();
         ROS_INFO("DWA Planner is Ready!");
     }
 
@@ -21,7 +21,7 @@ namespace FOLLOWING
         cur_cmd_vel_ = cmd_vel;
     }
 
-    void set_obs_list(const geometry_msgs::PoseArray &obs_list)
+    void DWA_planner::set_obs_list(const geometry_msgs::PoseArray &obs_list)
     {
         obs_list_ = obs_list;
     }
@@ -115,14 +115,14 @@ namespace FOLLOWING
         const Eigen::Vector3d point_D(point.x, point.y, 0.0);
 
         const Eigen::Vector3d vector_AB = point_B - point_A;
-        const Eigen::vector3d vector_BD = point_D - point_B;
-        const Eigen::vector3d cross_AB_BD = vector_AB.cross(vector_BD);
+        const Eigen::Vector3d vector_BD = point_D - point_B;
+        const Eigen::Vector3d cross_AB_BD = vector_AB.cross(vector_BD);
         const Eigen::Vector3d vector_BC = point_C - point_B;
-        const Eigen::vector3d vector_CD = point_D - point_C;
-        const Eigen::vector3d cross_BC_CD = vector_BC.cross(vector_CD);
+        const Eigen::Vector3d vector_CD = point_D - point_C;
+        const Eigen::Vector3d cross_BC_CD = vector_BC.cross(vector_CD);
         const Eigen::Vector3d vector_CA = point_A - point_C;
-        const Eigen::vector3d vector_AD = point_D - point_A;
-        const Eigen::vector3d cross_CA_AD = vector_CA.cross(vector_AD);
+        const Eigen::Vector3d vector_AD = point_D - point_A;
+        const Eigen::Vector3d cross_CA_AD = vector_CA.cross(vector_AD);
 
         if (cross_AB_BD.z() * cross_BC_CD.z() > 0 && cross_BC_CD.z() * cross_CA_AD.z() > 0)
         {
@@ -184,14 +184,14 @@ namespace FOLLOWING
     Window DWA_planner::calc_dynamic_window()
     {
         Window window;
-        window.min_velocity_x_ = std::max((cur_cmd_vel_.linear.x - max_linear_deceleration_ * sim_period_), min_linear_velocity_);
-        window.max_velocity_x_ = std::min((cur_cmd_vel_.linear.x + max_linear_acceleration_ * sim_period_), target_linear_velocity_);
-        window.min_velocity_yaw_ = std::max((cur_cmd_vel_.angular.z - max_angular_acceleration_ * sim_period_), -max_angular_velocity_);
-        window.max_velocity_yaw_ = std::min((cur_cmd_vel_.angular.z + max_angular_acceleration_ * sim_period_), max_angular_velocity_);
+        window.min_vel_x_ = std::max((cur_cmd_vel_.linear.x - max_linear_deceleration_ * sim_period_), min_linear_velocity_);
+        window.max_vel_x_ = std::min((cur_cmd_vel_.linear.x + max_linear_acceleration_ * sim_period_), target_linear_velocity_);
+        window.min_vel_yaw_ = std::max((cur_cmd_vel_.angular.z - max_angular_acceleration_ * sim_period_), -max_angular_velocity_);
+        window.max_vel_yaw_ = std::min((cur_cmd_vel_.angular.z + max_angular_acceleration_ * sim_period_), max_angular_velocity_);
         return window;
     }
 
-    geometry_msgs::Point DWAPlanner::calc_intersection(
+    geometry_msgs::Point DWA_planner::calc_intersection(
         const geometry_msgs::Point &obstacle, const State &state, geometry_msgs::PolygonStamped footprint)
     {
         const Eigen::Vector3d ray_start(obstacle.x, obstacle.y, 0.0);
@@ -315,7 +315,7 @@ namespace FOLLOWING
 
     void DWA_planner::normalize_costs(std::vector<Cost> &costs)
     {
-        Cost min_cost(1e6, 1e6, 1e6, 1e6, 1e6), max_cost;
+        Cost min_cost(1e6, 1e6, 1e6, 1e6, 1e6, 1e6), max_cost;
 
         for (const auto &cost : costs)
         {
@@ -358,7 +358,7 @@ namespace FOLLOWING
 
     std::vector<State> DWA_planner::dwa_planning(const Eigen::Vector3d &goal, std::vector<std::pair<std::vector<State>, bool>> &trajectories)
     {
-        Cost min_cost(0.0, 0.0, 0.0, 0.0, 1e6);
+        Cost min_cost(0.0, 0.0, 0.0, 0.0, 0.0, 1e6);
         const Window dynamic_window = calc_dynamic_window();
         std::vector<State> best_trajectory;
         best_trajectory.resize(sim_time_samples_);
@@ -366,17 +366,17 @@ namespace FOLLOWING
         const size_t costs_size = velocity_samples_x_ * (velocity_samples_yaw_ + 1);
         costs.reserve(costs_size);
 
-        const double vel_x_step = std::max((dynamic_window.max_velocity_x_ - dynamic_window.min_velocity_x_) / (velocity_samples_x_ - 1), __DBL_EPSILON__);
-        const double vel_yaw_step = std::max((dynamic_window.max_velocity_yaw_ - dynamic_window.min_velocity_yaw_) / (velocity_samples_yaw_ - 1), __DBL_EPSILON__);
+        const double vel_x_step = std::max((dynamic_window.max_vel_x_ - dynamic_window.min_vel_x_) / (velocity_samples_x_ - 1), __DBL_EPSILON__);
+        const double vel_yaw_step = std::max((dynamic_window.max_vel_yaw_ - dynamic_window.min_vel_yaw_) / (velocity_samples_yaw_ - 1), __DBL_EPSILON__);
 
         int avai_traj_num = 0;
         for (int i = 0; i < velocity_samples_x_; i++)
         {
-            const double vel_x = dynamic_window.min_velocity_x_ + vel_x_step * i;
+            const double vel_x = dynamic_window.min_vel_x_ + vel_x_step * i;
             for (int j = 0; j < velocity_samples_yaw_; j++)
             {
                 std::pair<std::vector<State>, bool> trajectory;
-                const double vel_yaw = dynamic_window.min_velocity_yaw_ + vel_yaw_step * j;
+                double vel_yaw = dynamic_window.min_vel_yaw_ + vel_yaw_step * j;
                 if (vel_x < slow_velocity_th_)
                 {
                     vel_yaw = vel_yaw > 0 ? std::max(vel_yaw, min_angular_velocity_) : std::min(vel_yaw, -min_angular_velocity_);
@@ -393,7 +393,7 @@ namespace FOLLOWING
                     trajectory.second = true;
                     avai_traj_num++;
                 }
-                trajectoreis.push_back(trajectory);
+                trajectories.push_back(trajectory);
             }
 
             if (dynamic_window.min_vel_yaw_ < 0.0 && 0.0 < dynamic_window.max_vel_yaw_)
@@ -411,7 +411,7 @@ namespace FOLLOWING
                     trajectory.second = true;
                     avai_traj_num++;
                 }
-                trajectoreis.push_back(trajectory);
+                trajectories.push_back(trajectory);
             }
         }
 
@@ -457,7 +457,7 @@ namespace FOLLOWING
         std::vector<std::pair<std::vector<State>, bool>> trajectories;
         const size_t trajectoris_size = velocity_samples_x_ * (velocity_samples_yaw_ + 1);
         trajectories.reserve(trajectoris_size);
-        best_trajectory = dwa_planning(goal, trajectories);
+        best_trajectory.first = dwa_planning(goal, trajectories);
         cmd_vel.linear.x = best_trajectory.first.front().vel_x_;
         cmd_vel.angular.z = best_trajectory.first.front().vel_yaw_;
         return cmd_vel;

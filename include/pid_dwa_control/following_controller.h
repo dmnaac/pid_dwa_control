@@ -3,12 +3,16 @@
 
 #include <memory>
 #include <ros/ros.h>
+#include <sensor_msgs/LaserScan.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <geometry_msgs/PoseStamped.h>
 
-#include "dwa_planner.h"
-#include "pid_controller.h"
+#include <spencer_tracking_msgs/TargetPerson.h>
+
+#include "pid_dwa_control/dwa_planner.h"
+#include "pid_dwa_control/pid_controller.h"
 
 namespace FOLLOWING
 {
@@ -31,8 +35,6 @@ namespace FOLLOWING
         ros::NodeHandle nh_;
         ros::NodeHandle local_nh_;
         ros::Publisher cmd_vel_pub_;
-        message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub_;
-        message_filters::Subscriber<TargetPerson> target_sub_;
 
         ros::Time last_time_;
 
@@ -48,7 +50,7 @@ namespace FOLLOWING
         ~following_controller();
 
         void create_obs_list(const sensor_msgs::LaserScan::ConstPtr &scan);
-        void target_callback(const geometry_msgs::PoseStamped::ConstPtr &msg);
+        void target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg);
         void spin();
     };
 }

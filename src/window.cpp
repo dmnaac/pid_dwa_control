@@ -1,3 +1,4 @@
+#include <ros/console.h>
 #include "pid_dwa_control/window.h"
 
 namespace FOLLOWING

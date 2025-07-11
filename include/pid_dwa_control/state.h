@@ -8,6 +8,7 @@ namespace FOLLOWING
     private:
         /* data */
     public:
+        State();
         State(const double x, const double y, const double yaw, const double vel_x, const double vel_yaw);
         ~State();
 

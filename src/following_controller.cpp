@@ -1,12 +1,13 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <geometry_msgs/Twist.h>
+#include <tf/tf.h>
 #include "pid_dwa_control/following_controller.h"
 
 namespace FOLLOWING
 {
-    following_controller::following_controller() : local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1),
-                                                   laser_sub_(nh_, "scan", 10), target_sub_(nh, "mono_following/target", 1), dwa_planner_()
+    following_controller::following_controller() : local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_()
     {
         local_nh_.param<bool>("enable_back", enable_back_, true);
         local_nh_.param<double>("max_linear_velocity", max_vel_x_, 0.2);
@@ -18,9 +19,12 @@ namespace FOLLOWING
         local_nh_.param<double>("scan_angle_resolution", scan_angle_resolution_, 0.87);
 
         cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
-        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, sensor_msgs::Image> SyncPolicy;
-        message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), laser_sub_, target_sub_);
-        sync.registerCallback(boost::bind(&following_controller::target_callback, _1, _2));
+
+        message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub(nh_, "scan", 10);
+        message_filters::Subscriber<spencer_tracking_msgs::TargetPerson> target_sub(nh_, "mono_following/target", 1);
+        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, spencer_tracking_msgs::TargetPerson> SyncPolicy;
+        message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), laser_sub, target_sub);
+        sync.registerCallback(boost::bind(&following_controller::target_callback, this, _1, _2));
 
         double rate = 10;
         control_dt_ = 1.0 / rate;
@@ -31,12 +35,14 @@ namespace FOLLOWING
 
         last_time_ = ros::Time::now();
 
-        ROS_INFO("Mono Controlling Node is Ready!");
+        ROS_INFO("Controlling Node is Ready!");
     }
 
-    void create_obs_list(const sensor_msgs::LaserScan::ConstPtr &scan)
+    following_controller::~following_controller() {}
+
+    void following_controller::create_obs_list(const sensor_msgs::LaserScan::ConstPtr &scan)
     {
-        obs_list_.clear();
+        obs_list_.poses.clear();
         float angle = scan->angle_min;
         const int angle_index_step = static_cast<int>(scan_angle_resolution_ / scan->angle_increment);
         for (int i = 0; i < scan->ranges.size(); i++)
@@ -55,13 +61,14 @@ namespace FOLLOWING
         }
     }
 
-    void following_controller::target_callback(const mono_following::TargetPerson::ConstPtr &targetMsg, const sensor_msgs::LaserScanConstPtr &laserScanMsg)
+    void following_controller::target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg)
     {
+        spencer_tracking_msgs::TargetPerson target_msg;
         target_msg = *targetMsg;
         create_obs_list(laserScanMsg);
         if (target_msg.pose.pose.position.x == 0 || target_msg.pose.pose.position.x > 3.5)
         {
-            cmd_vel_pub_.publish(Twist());
+            cmd_vel_pub_.publish(geometry_msgs::Twist());
             return;
         }
 
@@ -109,13 +116,19 @@ namespace FOLLOWING
         last_time_ = target_msg.header.stamp;
     }
 
-    following_controller::spin()
+    void following_controller::spin()
     {
+        if (last_time_.isZero())
+        {
+            last_time_ = ros::Time::now();
+            return;
+        }
+
         ros::Duration elapsed = ros::Time::now() - last_time_;
         if (elapsed.toSec() > timeout_)
         {
-            ROS_INFO(elapsed.toSec());
-            ROS_WARN("Timeout!");
+            ROS_INFO("Elapsed time: %.2f seconds", elapsed.toSec());
+            ROS_WARN("Timeout! No message received for %.2f seconds", timeout_);
             last_time_ = ros::Time::now();
         }
     }

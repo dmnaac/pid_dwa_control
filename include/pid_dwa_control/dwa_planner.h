@@ -3,12 +3,18 @@
 
 #include <vector>
 #include <Eigen/Dense>
+#include <ros/ros.h>
+#include <geometry_msgs/PolygonStamped.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Polygon.h>
+#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/PoseArray.h>
 
-#include "state.h"
-#include "cost.h"
-#include "window.h"
+#include "pid_dwa_control/state.h"
+#include "pid_dwa_control/cost.h"
+#include "pid_dwa_control/window.h"
 
-namespace FOLLOWSING
+namespace FOLLOWING
 {
     class DWA_planner
     {
@@ -17,37 +23,38 @@ namespace FOLLOWSING
         DWA_planner();
         ~DWA_planner();
 
-        void sim_one_step(State &state, const double vel_x, const double vel_yaw);
-        std::vector<State> generate_trajectory(const double vel_yaw, const Eigen::Vector3d &goal);
-        std::vector<State> generate_trajectory(const double vel_x, const double vel_yaw);
-        geometry_msgs::PolygonStamped move_footprint(const State &step);
+        void sim_one_step(FOLLOWING::State &state, const double vel_x, const double vel_yaw);
+        std::vector<FOLLOWING::State> generate_trajectory(const double vel_yaw, const Eigen::Vector3d &goal);
+        std::vector<FOLLOWING::State> generate_trajectory(const double vel_x, const double vel_yaw);
+        geometry_msgs::PolygonStamped move_footprint(const FOLLOWING::State &step);
 
         bool is_point_in_triangle(const geometry_msgs::Point &point, const geometry_msgs::Polygon &triangle);
-        bool is_point_in_footprint(const geometry_msgs::Point &obstacle, const geometry_msgs::PolygonStamped &footprint, const State &step);
-        bool check_collision(const std::vector<State> &trajectory);
+        bool is_point_in_footprint(const geometry_msgs::Point &obstacle, const geometry_msgs::PolygonStamped &footprint, const FOLLOWING::State &step);
+        bool check_collision(const std::vector<FOLLOWING::State> &trajectory);
 
-        Window calc_dynamic_window();
+        FOLLOWING::Window calc_dynamic_window();
         void set_cur_cmd_vel(const geometry_msgs::Twist &cmd_vel);
         void set_obs_list(const geometry_msgs::PoseArray &obs_list);
 
-        geometry_msgs::Point calc_intersection(const geometry_msgs::Point &obstacle, const State &state, geometry_msgs::PolygonStamped footprint);
-        float calc_dist_to_footprint(const geometry_msgs::Point &obstacle, const State &state);
+        geometry_msgs::Point calc_intersection(const geometry_msgs::Point &obstacle, const FOLLOWING::State &state, geometry_msgs::PolygonStamped footprint);
+        float calc_dist_to_footprint(const geometry_msgs::Point &obstacle, const FOLLOWING::State &state);
 
-        float calc_goal_cost(const std::vector<State> &trajectory, const Eigen::Vector3d &goal);
-        float calc_direction_cost(const std::vector<State> &trajectory, const Eigen::Vector3d &goal);
-        float calc_obs_cost(const std::vector<State> &trajectory);
-        float calc_speed_cost(const std::vector<State> &trajectory);
-        Cost calc_traj_cost(const std::vector<State> &trajectory, const Eigen::Vector3d &goal);
+        float calc_goal_cost(const std::vector<FOLLOWING::State> &trajectory, const Eigen::Vector3d &goal);
+        float calc_direction_cost(const std::vector<FOLLOWING::State> &trajectory, const Eigen::Vector3d &goal);
+        float calc_obs_cost(const std::vector<FOLLOWING::State> &trajectory);
+        float calc_speed_cost(const std::vector<FOLLOWING::State> &trajectory);
+        FOLLOWING::Cost calc_traj_cost(const std::vector<FOLLOWING::State> &trajectory, const Eigen::Vector3d &goal);
 
-        void normalize_costs(std::vector<Cost> &costs);
+        void normalize_costs(std::vector<FOLLOWING::Cost> &costs);
 
-        std::vector<State> dwa_planning(const Eigen::Vector3d &goal, std::vector<std::pair<std::vector<State>, bool>> &trajectories);
+        std::vector<FOLLOWING::State> dwa_planning(const Eigen::Vector3d &goal, std::vector<std::pair<std::vector<FOLLOWING::State>, bool>> &trajectories);
 
         geometry_msgs::Twist calc_cmd_vel(const Eigen::Vector3d &goal);
 
         void load_params();
 
     private:
+        ros::NodeHandle local_nh_;
         double sim_direction_;
         int sim_time_samples_;
         int velocity_samples_x_;
@@ -71,6 +78,8 @@ namespace FOLLOWSING
         double max_linear_acceleration_;
         double max_linear_deceleration_;
         double max_angular_acceleration_;
+        double max_in_place_angular_velocity_;
+        double min_in_place_angular_velocity_;
 
         double obs_range_;
 

@@ -3,7 +3,9 @@
 
 #include "pid_dwa_control/dwa_planner.h"
 
-void DWA_planner::load_params()
+namespace FOLLOWING
+{
+    void DWA_planner::load_params()
 {
     local_nh_.param<double>("FOOTPRINT_PADDING", footprint_padding_, 0.01);
     local_nh_.param<double>("MAX_LINEAR_ACCELERATION", max_linear_acceleration_, 0.5);
@@ -22,7 +24,7 @@ void DWA_planner::load_params()
     local_nh_.param<double>("ROBOT_RADIUS", robot_radius_, 0.1);
     local_nh_.param<double>("SIM_DIRECTION", sim_direction_, M_PI / 2.0);
     local_nh_.param<double>("SIM_PERIOD", sim_period_, 0.1);
-    local_nh_.param<double>("SIM_TIME_SAMPLES", sim_time_samples_, 10);
+    local_nh_.param<int>("SIM_TIME_SAMPLES", sim_time_samples_, 10);
     local_nh_.param<double>("SLOW_VELOCITY_TH", slow_velocity_th_, 0.1);
     local_nh_.param<double>("SPEED_COST_GAIN", speed_cost_gain_, 0.4);
     local_nh_.param<double>("TARGET_LINEAR_VELOCITY", target_linear_velocity_, 0.55);
@@ -30,9 +32,10 @@ void DWA_planner::load_params()
     local_nh_.param<double>("DIRECTION_COST_GAIN", direction_cost_gain_, 1.0);
     local_nh_.param<bool>("USE_FOOTPRINT", use_footprint_, true);
     local_nh_.param<bool>("USE_PATH_COST", use_path_cost_, false);
-    local_nh_.param<double>("VELOCITY_SAMPLES_X", velocity_samples_x_, 3);
-    local_nh_.param<double>("VELOCITY_SAMPLES_Y", velocity_samples_y_, 20);
-    local_nh_.param<double>("VELOCITY_SAMPLES_YAW", velocity_samples_yaw_, 20);
+    local_nh_.param<int>("VELOCITY_SAMPLES_X", velocity_samples_x_, 3);
+    local_nh_.param<int>("VELOCITY_SAMPLES_Y", velocity_samples_y_, 20);
+    local_nh_.param<int>("VELOCITY_SAMPLES_YAW", velocity_samples_yaw_, 20);
 
     target_linear_velocity_ = std::min(target_linear_velocity_, max_linear_velocity_);
+}
 }
