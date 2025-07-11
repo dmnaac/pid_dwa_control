@@ -16,7 +16,7 @@ namespace FOLLOWING
         local_nh_.param<double>("gain_angular_velocity", gain_vel_yaw_, 0.3);
         local_nh_.param<double>("distance", distance_, 1.0);
         local_nh_.param<double>("timeout", timeout_, 1.0);
-        local_nh_.param<double>("scan_angle_resolution", scan_angle_resolution_, 0.87);
+        local_nh_.param<double>("scan_angle_resolution", scan_angle_resolution_, 0.087);
 
         cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
@@ -82,7 +82,7 @@ namespace FOLLOWING
         double w = th_pid_controller_ptr_->calc_output(-th_err, control_dt_) * scale_vel_yaw_;
         double v = xy_pid_controller_ptr_->calc_output(-p_err, control_dt_) * scale_vel_x_;
         double vx = 0.0;
-        double vz = w / 2.0;
+        double vyaw = w / 2.0;
 
         const double angle_threshold = M_PI / 4.0;
         if (std::abs(th_err) < angle_threshold)
@@ -96,15 +96,16 @@ namespace FOLLOWING
         }
 
         const Eigen::Vector3d goal(px, py, tf::getYaw(target_msg.pose.pose.orientation));
-        std::vector<State> trajectory = dwa_planner_.generate_trajectory(vz, goal);
+        std::vector<State> trajectory = dwa_planner_.generate_trajectory(vyaw, goal);
         dwa_planner_.set_obs_list(obs_list_);
         geometry_msgs::Twist cmd_vel;
 
         if (!dwa_planner_.check_collision(trajectory))
         {
             cmd_vel.linear.x = vx;
-            cmd_vel.angular.z = vz;
+            cmd_vel.angular.z = vyaw;
             cmd_vel_pub_.publish(cmd_vel);
+            ROS_INFO("Execute PID controller output.");
         }
         else
         {

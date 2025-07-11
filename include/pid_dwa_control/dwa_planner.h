@@ -78,8 +78,6 @@ namespace FOLLOWING
         double max_linear_acceleration_;
         double max_linear_deceleration_;
         double max_angular_acceleration_;
-        double max_in_place_angular_velocity_;
-        double min_in_place_angular_velocity_;
 
         double obs_range_;
 

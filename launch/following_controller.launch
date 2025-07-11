@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+    <param name="use_sim_time" value="false" />
+
+    <arg name="dwa_param" default="$(find pid_dwa_control)/config/dwa_param.yaml"/>
+    <arg name="robot_param" default="$(find pid_dwa_control)/config/robot_param.yaml"/>
+
+    <node pkg="pid_dwa_control" type="pid_dwa_control_node" name="pid_dwa_control_node" output="screen">
+        <param name="enable_back" value="true"/>
+        <param name="max_linear_velocity" value="2.0"/>
+        <param name="max_angular_velocity" value="8.0"/>
+        <param name="gain_linear_velocity" value="0.6"/>
+        <param name="gain_angular_velocity" value="2.5"/>
+        <param name="distance" value="2.0"/>
+        <param name="timeout" value="0.5"/>
+        <param name="scan_angle_resolution" value="0.087"/>
+
+        <rosparam command="load" file="$(arg dwa_param)"/>
+        <rosparam command="load" file="$(arg robot_param)"/>
+    </node>
+</launch>
