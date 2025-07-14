@@ -3,6 +3,8 @@
 
 #include <memory>
 #include <ros/ros.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <sensor_msgs/LaserScan.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
@@ -44,6 +46,9 @@ namespace FOLLOWING
         DWA_planner dwa_planner_;
         geometry_msgs::PoseArray obs_list_;
         geometry_msgs::Twist pid_cmd_vel_;
+
+        tf2_ros::Buffer tf_buffer_;
+        tf2_ros::TransformListener tf_listener_;
 
     public:
         following_controller();

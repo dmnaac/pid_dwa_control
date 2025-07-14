@@ -7,7 +7,7 @@
 
 namespace FOLLOWING
 {
-    following_controller::following_controller() : local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_)
+    following_controller::following_controller() : local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_), tf_listener_(tf_buffer_)
     {
         local_nh_.param<bool>("enable_back", enable_back_, true);
         local_nh_.param<double>("max_linear_velocity", max_vel_x_, 0.2);
@@ -20,7 +20,7 @@ namespace FOLLOWING
 
         cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
-        message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub(nh_, "scan", 10);
+        message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub(nh_, "scan_master", 10);
         message_filters::Subscriber<spencer_tracking_msgs::TargetPerson> target_sub(nh_, "mono_following/target", 1);
         typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, spencer_tracking_msgs::TargetPerson> SyncPolicy;
         message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), laser_sub, target_sub);
@@ -45,6 +45,8 @@ namespace FOLLOWING
         obs_list_.poses.clear();
         float angle = scan->angle_min;
         const int angle_index_step = static_cast<int>(scan_angle_resolution_ / scan->angle_increment);
+        geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform("base_link", scan->header.frame_id, ros::Time(0), ros::Duration(0.1));
+
         for (int i = 0; i < scan->ranges.size(); i++)
         {
             const float range = scan->ranges[i];
@@ -53,9 +55,18 @@ namespace FOLLOWING
                 angle += scan->angle_increment;
                 continue;
             }
+
+            geometry_msgs::PointStamped obs_lidar;
+            obs_lidar.header = scan->header;
+            obs_lidar.point.x = range * std::cos(angle);
+            obs_lidar.point.y = range * std::sin(angle);
+            obs_lidar.point.z = 0.0;
+
+            geometry_msgs::PointStamped obs_robot;
+            tf2::doTransform(obs_lidar, obs_robot, transform);
+
             geometry_msgs::Pose pose;
-            pose.position.x = range * cos(angle);
-            pose.position.y = range * sin(angle);
+            pose.position = obs_robot.point;
             obs_list_.poses.push_back(pose);
             angle += scan->angle_increment;
         }
