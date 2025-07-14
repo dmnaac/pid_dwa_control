@@ -86,7 +86,7 @@ namespace FOLLOWING
         double speed_cost_gain_;
         double direction_cost_gain_;
 
-        std::optional<geometry_msgs::PolygonStamped> footprint_;
+        std::vector<geometry_msgs::Point> footprint_points_;
     };
 }
 

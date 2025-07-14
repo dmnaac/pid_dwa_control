@@ -69,7 +69,12 @@ namespace FOLLOWING
         geometry_msgs::PolygonStamped footprint;
         if (use_footprint_)
         {
-            footprint = footprint_.value();
+            for (size_t i = 0; i < footprint_points_.size(); ++i)
+            {
+                footprint.polygon.points[i].x += footprint_points_[i].x < 0 ? -footprint_padding_ : footprint_padding_;
+                footprint.polygon.points[i].y += footprint_points_[i].y < 0 ? -footprint_padding_ : footprint_padding_;
+                footprint.polygon.points[i].z = 0.0; // 2D footprint
+            }
         }
         else
         {
@@ -84,6 +89,7 @@ namespace FOLLOWING
         }
 
         footprint.header.stamp = ros::Time::now();
+        footprint.header.frame_id = "base_link";
 
         for (auto &point : footprint.polygon.points)
         {

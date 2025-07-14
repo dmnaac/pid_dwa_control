@@ -99,17 +99,18 @@ namespace FOLLOWING
         std::vector<State> trajectory = dwa_planner_.generate_trajectory(vyaw, goal);
         dwa_planner_.set_obs_list(obs_list_);
         geometry_msgs::Twist cmd_vel;
+        cmd_vel.linear.x = vx;
+        cmd_vel.angular.z = vyaw;
 
         if (!dwa_planner_.check_collision(trajectory))
         {
-            cmd_vel.linear.x = vx;
-            cmd_vel.angular.z = vyaw;
             cmd_vel_pub_.publish(cmd_vel);
             ROS_INFO("Execute PID controller output.");
         }
         else
         {
             ROS_INFO("Collision! DWA is replanning.");
+            dwa_planner_.set_cur_cmd_vel(cmd_vel);
             cmd_vel = dwa_planner_.calc_cmd_vel(goal);
             cmd_vel_pub_.publish(cmd_vel);
         }

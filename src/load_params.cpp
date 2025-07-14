@@ -5,6 +5,58 @@
 
 namespace FOLLOWING
 {
+    double getNumberFromXMLRPC(XmlRpc::XmlRpcValue &value, const std::string &full_param_name)
+    {
+        // Make sure that the value we're looking at is either a double or an int.
+        if (value.getType() != XmlRpc::XmlRpcValue::TypeInt &&
+            value.getType() != XmlRpc::XmlRpcValue::TypeDouble)
+        {
+            std::string &value_string = value;
+            ROS_FATAL("Values in the footprint specification (param %s) must be numbers. Found value %s.",
+                      full_param_name.c_str(), value_string.c_str());
+            throw std::runtime_error("Values in the footprint specification must be numbers");
+        }
+        return value.getType() == XmlRpc::XmlRpcValue::TypeInt ? (int)(value) : (double)(value);
+    }
+
+    std::vector<geometry_msgs::Point> makeFootprintFromXMLRPC(XmlRpc::XmlRpcValue &footprint_xmlrpc,
+                                                              const std::string &full_param_name)
+    {
+        // Make sure we have an array of at least 3 elements.
+        if (footprint_xmlrpc.getType() != XmlRpc::XmlRpcValue::TypeArray ||
+            footprint_xmlrpc.size() < 3)
+        {
+            ROS_FATAL("The footprint must be specified as list of lists on the parameter server, %s was specified as %s",
+                      full_param_name.c_str(), std::string(footprint_xmlrpc).c_str());
+            throw std::runtime_error("The footprint must be specified as list of lists on the parameter server with at least "
+                                     "3 points eg: [[x1, y1], [x2, y2], ..., [xn, yn]]");
+        }
+
+        std::vector<geometry_msgs::Point> footprint;
+        geometry_msgs::Point pt;
+
+        for (int i = 0; i < footprint_xmlrpc.size(); ++i)
+        {
+            // Make sure each element of the list is an array of size 2. (x and y coordinates)
+            XmlRpc::XmlRpcValue point = footprint_xmlrpc[i];
+            if (point.getType() != XmlRpc::XmlRpcValue::TypeArray ||
+                point.size() != 2)
+            {
+                ROS_FATAL("The footprint (parameter %s) must be specified as list of lists on the parameter server eg: "
+                          "[[x1, y1], [x2, y2], ..., [xn, yn]], but this spec is not of that form.",
+                          full_param_name.c_str());
+                throw std::runtime_error("The footprint must be specified as list of lists on the parameter server eg: "
+                                         "[[x1, y1], [x2, y2], ..., [xn, yn]], but this spec is not of that form");
+            }
+
+            pt.x = getNumberFromXMLRPC(point[0], full_param_name);
+            pt.y = getNumberFromXMLRPC(point[1], full_param_name);
+
+            footprint.push_back(pt);
+        }
+        return footprint;
+    }
+
     void DWA_planner::load_params()
     {
         local_nh_.param<bool>("USE_FOOTPRINT", use_footprint_, true);
@@ -43,5 +95,23 @@ namespace FOLLOWING
         local_nh_.param<double>("MAX_ANGULAR_ACCELERATION", max_angular_acceleration_, 3.2);
 
         target_linear_velocity_ = std::min(target_linear_velocity_, max_linear_velocity_);
+
+        if (use_footprint_)
+        {
+            XmlRpc::XmlRpcValue footprint_xmlrpc;
+            if (!local_nh_.getParam("FOOTPRINT", footprint_xmlrpc))
+            {
+                ROS_ERROR("USE_FOOTPRINT but not found FOOTPRINT param");
+            }
+            else
+            {
+                footprint_points_ = makeFootprintFromXMLRPC(footprint_xmlrpc, "FOOTPRINT");
+            }
+
+            if (footprint_points_.size() < 3)
+            {
+                ROS_ERROR("Footprint must have at least 3 points");
+            }
+        }
     }
 }
