@@ -7,7 +7,7 @@
 
 namespace FOLLOWING
 {
-    following_controller::following_controller() : local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_()
+    following_controller::following_controller() : local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_)
     {
         local_nh_.param<bool>("enable_back", enable_back_, true);
         local_nh_.param<double>("max_linear_velocity", max_vel_x_, 0.2);

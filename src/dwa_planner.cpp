@@ -6,7 +6,7 @@
 
 namespace FOLLOWING
 {
-    DWA_planner::DWA_planner()
+    DWA_planner::DWA_planner(ros::NodeHandle private_nh):local_nh_(private_nh)
     {
         DWA_planner::load_params();
         ROS_INFO("DWA Planner is Ready!");

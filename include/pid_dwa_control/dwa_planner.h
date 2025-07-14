@@ -20,7 +20,7 @@ namespace FOLLOWING
     {
 
     public:
-        DWA_planner();
+        DWA_planner(ros::NodeHandle private_nh);
         ~DWA_planner();
 
         void sim_one_step(FOLLOWING::State &state, const double vel_x, const double vel_yaw);
