@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
+#include <ros/ros.h>
 
 #include "pid_dwa_control/pid_controller.h"
 
@@ -31,6 +32,8 @@ namespace FOLLOWING
         {
             throw std::invalid_argument("min_err_int > max_err_int");
         }
+
+        ROS_INFO_STREAM("PID controller is ready.");
     }
 
     PID_controller::~PID_controller()

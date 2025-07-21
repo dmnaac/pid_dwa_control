@@ -7,7 +7,7 @@
 
 namespace FOLLOWING
 {
-    following_controller::following_controller() : local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_), tf_listener_(tf_buffer_)
+    following_controller::following_controller(ros::NodeHandle nh) : nh_(nh), local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_), tf_listener_(tf_buffer_), laser_sub_(nh_, "/scan_master", 100), target_sub_(nh_, "/mono_following/target", 100)
     {
         local_nh_.param<bool>("enable_back", enable_back_, true);
         local_nh_.param<double>("max_linear_velocity", max_vel_x_, 0.2);
@@ -18,13 +18,19 @@ namespace FOLLOWING
         local_nh_.param<double>("timeout", timeout_, 1.0);
         local_nh_.param<double>("scan_angle_resolution", scan_angle_resolution_, 0.087);
 
-        cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
+        cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel_x", 1);
 
-        message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub(nh_, "scan_master", 10);
-        message_filters::Subscriber<spencer_tracking_msgs::TargetPerson> target_sub(nh_, "mono_following/target", 1);
-        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, spencer_tracking_msgs::TargetPerson> SyncPolicy;
-        message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), laser_sub, target_sub);
-        sync.registerCallback(boost::bind(&following_controller::target_callback, this, _1, _2));
+        predict_footprint_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/predict_footprint", 1);
+
+        predict_trajectory_pub_ = nh_.advertise<visualization_msgs::Marker>("/predict_trajectory", 1);
+
+        sync_ = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(SyncPolicy(100), laser_sub_, target_sub_);
+
+        // message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub(nh_, "/scan_master", 10);
+        // message_filters::Subscriber<spencer_tracking_msgs::TargetPerson> target_sub(nh_, "/mono_following/target", 1);
+        // typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, spencer_tracking_msgs::TargetPerson> SyncPolicy;
+        // message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), laser_sub_, target_sub_);
+        sync_->registerCallback(std::bind(&following_controller::target_callback, this, std::placeholders::_1, std::placeholders::_2));
 
         double rate = 10;
         control_dt_ = 1.0 / rate;
@@ -34,6 +40,8 @@ namespace FOLLOWING
         th_pid_controller_ptr_ = std::make_unique<PID_controller>(1.0, 0.5, 0.2, 0.0, -max_vel_yaw_, max_vel_yaw_, -0.2, 0.2, control_dt_);
 
         last_time_ = ros::Time::now();
+        cmd_vel_ = geometry_msgs::Twist();
+        last_cmd_vel_ = geometry_msgs::Twist();
 
         ROS_INFO("Controlling Node is Ready!");
     }
@@ -74,9 +82,11 @@ namespace FOLLOWING
 
     void following_controller::target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg)
     {
+        // ROS_INFO("Processing synchronized messages");
         spencer_tracking_msgs::TargetPerson target_msg;
         target_msg = *targetMsg;
-        create_obs_list(laserScanMsg);
+        following_controller::create_obs_list(laserScanMsg);
+        // ROS_INFO_STREAM("Obstacle list size: " << obs_list_.poses.size());
         if (target_msg.pose.pose.position.x == 0 || target_msg.pose.pose.position.x > 3.5)
         {
             cmd_vel_pub_.publish(geometry_msgs::Twist());
@@ -94,36 +104,46 @@ namespace FOLLOWING
         double v = xy_pid_controller_ptr_->calc_output(-p_err, control_dt_) * scale_vel_x_;
         double vx = 0.0;
         double vyaw = w / 2.0;
+        // ROS_INFO_STREAM("PID output vx: " << v << " vyaw: " << w);
 
         const double angle_threshold = M_PI / 4.0;
         if (std::abs(th_err) < angle_threshold)
         {
             double min_vel_x = enable_back_ ? -max_vel_x_ : 0.0;
-            vx = std::clamp(vx, min_vel_x, max_vel_x_);
+            vx = std::clamp(v, min_vel_x, max_vel_x_);
         }
         else
         {
             ROS_INFO("Rotation too big");
         }
 
-        const Eigen::Vector3d goal(px, py, tf::getYaw(target_msg.pose.pose.orientation));
-        std::vector<State> trajectory = dwa_planner_.generate_trajectory(vyaw, goal);
+        // const Eigen::Vector3d goal(px, py, tf::getYaw(target_msg.pose.pose.orientation));
+        const Eigen::Vector3d goal(px, py, 0.0);
+        std::vector<State> trajectory = dwa_planner_.generate_trajectory(vx, vyaw);
+        // ROS_INFO_STREAM("Trajectory size: " << trajectory.size());
         dwa_planner_.set_obs_list(obs_list_);
-        geometry_msgs::Twist cmd_vel;
-        cmd_vel.linear.x = vx;
-        cmd_vel.angular.z = vyaw;
+        // ROS_INFO_STREAM("Obstacle list size: " << dwa_planner_.get_obs_list().poses.size());
+
+        // ROS_INFO_STREAM("DWA planner input: vx: " << vx << " vyaw: " << vyaw);
 
         if (!dwa_planner_.check_collision(trajectory))
         {
-            cmd_vel_pub_.publish(cmd_vel);
-            ROS_INFO("Execute PID controller output.");
+            cmd_vel_.linear.x = vx;
+            cmd_vel_.angular.z = vyaw;
+            cmd_vel_pub_.publish(cmd_vel_);
+            ROS_INFO_STREAM("Execute PID velocity command: vx: " << vx << ", vyaw: " << vyaw);
+            last_cmd_vel_ = cmd_vel_;
+
+            dwa_planner_.visualize_trajectory(trajectory, predict_trajectory_pub_);
         }
         else
         {
             ROS_INFO("Collision! DWA is replanning.");
-            dwa_planner_.set_cur_cmd_vel(cmd_vel);
-            cmd_vel = dwa_planner_.calc_cmd_vel(goal);
-            cmd_vel_pub_.publish(cmd_vel);
+            dwa_planner_.set_cur_cmd_vel(last_cmd_vel_);
+            cmd_vel_ = dwa_planner_.calc_cmd_vel(goal);
+            cmd_vel_pub_.publish(cmd_vel_);
+            ROS_INFO_STREAM("Execute DWA velocity command: vx: " << cmd_vel_.linear.x << ", vyaw:" << cmd_vel_.angular.z);
+            last_cmd_vel_ = cmd_vel_;
         }
 
         last_time_ = target_msg.header.stamp;
@@ -140,8 +160,8 @@ namespace FOLLOWING
         ros::Duration elapsed = ros::Time::now() - last_time_;
         if (elapsed.toSec() > timeout_)
         {
-            ROS_INFO("Elapsed time: %.2f seconds", elapsed.toSec());
-            ROS_WARN("Timeout! No message received for %.2f seconds", timeout_);
+            // ROS_INFO("Elapsed time: %.2f seconds", elapsed.toSec());
+            // ROS_WARN("Timeout! No message received for %.2f seconds", timeout_);
             last_time_ = ros::Time::now();
         }
     }

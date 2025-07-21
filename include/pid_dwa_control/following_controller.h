@@ -37,6 +37,8 @@ namespace FOLLOWING
         ros::NodeHandle nh_;
         ros::NodeHandle local_nh_;
         ros::Publisher cmd_vel_pub_;
+        ros::Publisher predict_footprint_pub_;
+        ros::Publisher predict_trajectory_pub_;
 
         ros::Time last_time_;
 
@@ -45,13 +47,19 @@ namespace FOLLOWING
 
         DWA_planner dwa_planner_;
         geometry_msgs::PoseArray obs_list_;
-        geometry_msgs::Twist pid_cmd_vel_;
+        geometry_msgs::Twist cmd_vel_;
+        geometry_msgs::Twist last_cmd_vel_;
 
         tf2_ros::Buffer tf_buffer_;
         tf2_ros::TransformListener tf_listener_;
 
+        message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub_;
+        message_filters::Subscriber<spencer_tracking_msgs::TargetPerson> target_sub_;
+        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, spencer_tracking_msgs::TargetPerson> SyncPolicy;
+        std::shared_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
+
     public:
-        following_controller();
+        following_controller(ros::NodeHandle nh);
         ~following_controller();
 
         void create_obs_list(const sensor_msgs::LaserScan::ConstPtr &scan);

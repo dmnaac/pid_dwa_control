@@ -3,10 +3,13 @@
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "pid_dwa_control_node");
-    FOLLOWING::following_controller follower;
+    ros::NodeHandle nh;
+    FOLLOWING::following_controller follower(nh);
     ros::Rate loop_rate(10);
+
     while (ros::ok())
     {
+        ros::spinOnce();
         follower.spin();
         loop_rate.sleep();
     }

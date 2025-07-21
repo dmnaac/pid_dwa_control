@@ -9,6 +9,8 @@
 #include <geometry_msgs/Polygon.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/PoseArray.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include "pid_dwa_control/state.h"
 #include "pid_dwa_control/cost.h"
@@ -35,6 +37,7 @@ namespace FOLLOWING
         FOLLOWING::Window calc_dynamic_window();
         void set_cur_cmd_vel(const geometry_msgs::Twist &cmd_vel);
         void set_obs_list(const geometry_msgs::PoseArray &obs_list);
+        geometry_msgs::PoseArray get_obs_list();
 
         geometry_msgs::Point calc_intersection(const geometry_msgs::Point &obstacle, const FOLLOWING::State &state, geometry_msgs::PolygonStamped footprint);
         float calc_dist_to_footprint(const geometry_msgs::Point &obstacle, const FOLLOWING::State &state);
@@ -52,6 +55,15 @@ namespace FOLLOWING
         geometry_msgs::Twist calc_cmd_vel(const Eigen::Vector3d &goal);
 
         void load_params();
+
+        visualization_msgs::Marker create_marker_msg(
+            const int id, const double scale, const std_msgs::ColorRGBA color, const std::vector<State> &trajectory,
+            const geometry_msgs::PolygonStamped &footprint = geometry_msgs::PolygonStamped());
+        void visualize_footprints(const std::vector<State> &trajectory, const ros::Publisher &pub);
+
+        void visualize_trajectory(const std::vector<State> &trajectory, const ros::Publisher &pub);
+        void visualize_trajectories(
+            const std::vector<std::pair<std::vector<State>, bool>> &trajectories, const ros::Publisher &pub);
 
     private:
         ros::NodeHandle local_nh_;
@@ -86,7 +98,10 @@ namespace FOLLOWING
         double speed_cost_gain_;
         double direction_cost_gain_;
 
-        std::vector<geometry_msgs::Point> footprint_points_;
+        std::vector<geometry_msgs::Point32> footprint_points_;
+        geometry_msgs::PolygonStamped footprint_;
+
+        void generate_footprint();
     };
 }
 

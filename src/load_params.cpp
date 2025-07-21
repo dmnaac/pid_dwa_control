@@ -19,8 +19,8 @@ namespace FOLLOWING
         return value.getType() == XmlRpc::XmlRpcValue::TypeInt ? (int)(value) : (double)(value);
     }
 
-    std::vector<geometry_msgs::Point> makeFootprintFromXMLRPC(XmlRpc::XmlRpcValue &footprint_xmlrpc,
-                                                              const std::string &full_param_name)
+    std::vector<geometry_msgs::Point32> makeFootprintFromXMLRPC(XmlRpc::XmlRpcValue &footprint_xmlrpc,
+                                                                const std::string &full_param_name)
     {
         // Make sure we have an array of at least 3 elements.
         if (footprint_xmlrpc.getType() != XmlRpc::XmlRpcValue::TypeArray ||
@@ -32,8 +32,8 @@ namespace FOLLOWING
                                      "3 points eg: [[x1, y1], [x2, y2], ..., [xn, yn]]");
         }
 
-        std::vector<geometry_msgs::Point> footprint;
-        geometry_msgs::Point pt;
+        std::vector<geometry_msgs::Point32> footprint;
+        geometry_msgs::Point32 pt;
 
         for (int i = 0; i < footprint_xmlrpc.size(); ++i)
         {
@@ -60,6 +60,7 @@ namespace FOLLOWING
     void DWA_planner::load_params()
     {
         local_nh_.param<bool>("USE_FOOTPRINT", use_footprint_, true);
+        local_nh_.param<bool>("USE_SPEED_COST", use_speed_cost_, true);
         local_nh_.param<bool>("USE_PATH_COST", use_path_cost_, false);
 
         // DWA planner params
@@ -73,9 +74,9 @@ namespace FOLLOWING
         local_nh_.param<int>("VELOCITY_SAMPLES_Y", velocity_samples_y_, 3);
         local_nh_.param<int>("VELOCITY_SAMPLES_YAW", velocity_samples_yaw_, 20);
 
-        local_nh_.param<double>("OBSTACLE_COST_GAIN", obs_cost_gain_, 1.0);
+        local_nh_.param<double>("OBSTACLE_COST_GAIN", obs_cost_gain_, 1.2);
         local_nh_.param<double>("GOAL_COST_GAIN", goal_cost_gain_, 0.8);
-        local_nh_.param<double>("DIRECTION_COST_GAIN", direction_cost_gain_, 1.0);
+        local_nh_.param<double>("DIRECTION_COST_GAIN", direction_cost_gain_, 0.2);
         local_nh_.param<double>("SPEED_COST_GAIN", speed_cost_gain_, 0.4);
 
         local_nh_.param<double>("OBS_RANGE", obs_range_, 2.5);

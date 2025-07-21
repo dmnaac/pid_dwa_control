@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
   std_msgs
   geometry_msgs
+  visualization_msgs
   spencer_tracking_msgs
   tf2_ros
   tf2_geometry_msgs

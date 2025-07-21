@@ -3,8 +3,9 @@
 
 # Robot Size Parameters
 USE_FOOTPRINT: true
+# FOOTPRINT: [[-0.2800, -0.1600], [-0.2800, 0.1600], [0.1200, 0.1600], [0.1200, -0.1600]]
 FOOTPRINT:
-  [[-0.2800, -0.1600], [-0.2800, 0.1600], [0.1200, 0.1600], [0.1200, -0.1600]]
+  [[0.1600, 0.1200], [-0.1600, 0.1200], [-0.1600, -0.2800], [0.1600, -0.2800]]
 ROBOT_RADIUS: 0.1 # [m], If param "USE_FOOTPRINT" is set to true, this param is not used
 FOOTPRINT_PADDING: 0.01 # [m], If localmap contains padding, you should set this param to 0.0
 
