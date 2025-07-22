@@ -5,7 +5,11 @@
 #include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <Eigen/Dense>
 #include <sensor_msgs/LaserScan.h>
+#include <nav_msgs/Odometry.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -15,6 +19,7 @@
 
 #include "pid_dwa_control/dwa_planner.h"
 #include "pid_dwa_control/pid_controller.h"
+#include "pid_dwa_control/target.h"
 
 namespace FOLLOWING
 {
@@ -49,21 +54,33 @@ namespace FOLLOWING
         geometry_msgs::PoseArray obs_list_;
         geometry_msgs::Twist cmd_vel_;
         geometry_msgs::Twist last_cmd_vel_;
+        geometry_msgs::Twist pid_vel_;
 
         tf2_ros::Buffer tf_buffer_;
         tf2_ros::TransformListener tf_listener_;
 
+        ros::Subscriber target_sub_;
         message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub_;
-        message_filters::Subscriber<spencer_tracking_msgs::TargetPerson> target_sub_;
-        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, spencer_tracking_msgs::TargetPerson> SyncPolicy;
+        message_filters::Subscriber<nav_msgs::Odometry> odom_sub_;
+        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry> SyncPolicy;
         std::shared_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
+
+        Target target_;
+        Target last_target_;
+
+        Eigen::Isometry3d last_transform_;
+        Eigen::Isometry3d transform_;
+
+        Eigen::Isometry3d
+        odomToTransform(const nav_msgs::Odometry::ConstPtr &odom);
 
     public:
         following_controller(ros::NodeHandle nh);
         ~following_controller();
 
         void create_obs_list(const sensor_msgs::LaserScan::ConstPtr &scan);
-        void target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg);
+        void target_register(const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg);
+        void target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const nav_msgs::Odometry::ConstPtr &odomMsg);
         void spin();
     };
 }
