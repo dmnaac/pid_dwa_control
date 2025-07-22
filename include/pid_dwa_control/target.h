@@ -4,6 +4,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/TwistStamped.h"
+#include "geometry_msgs/PoseWithCovariance.h"
 #include "spencer_tracking_msgs/TargetPerson.h"
 
 namespace FOLLOWING

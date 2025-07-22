@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   visualization_msgs
   spencer_tracking_msgs
+  tf2
   tf2_ros
   tf2_geometry_msgs
 )
@@ -150,6 +151,7 @@ add_executable(${PROJECT_NAME}_node
   src/load_params.cpp
   src/pid_controller.cpp
   src/state.cpp
+  src/target.cpp
   src/window.cpp
 )
 

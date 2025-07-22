@@ -4,7 +4,7 @@ namespace FOLLOWING
 {
     Target::Target()
     {
-        pose_.header.stamp = ros::Time::Time();
+        pose_.header.stamp = ros::Time(0);
         pose_.pose.position.x = 0.0;
         pose_.pose.position.y = 0.0;
         pose_.pose.position.z = 0.0;
@@ -13,7 +13,7 @@ namespace FOLLOWING
         pose_.pose.orientation.z = 0.0;
         pose_.pose.orientation.w = 1.0;
 
-        twist_.header.stamp = ros::Time::Time();
+        twist_.header.stamp = ros::Time(0);
         twist_.twist.linear.x = 0.0;
         twist_.twist.linear.y = 0.0;
         twist_.twist.linear.z = 0.0;
@@ -22,6 +22,10 @@ namespace FOLLOWING
         twist_.twist.angular.z = 0.0;
 
         is_valid_ = false;
+    }
+
+    Target::~Target()
+    {
     }
 
     geometry_msgs::PoseStamped Target::getPose()
@@ -42,8 +46,9 @@ namespace FOLLOWING
     void Target::setTarget(const spencer_tracking_msgs::TargetPerson target)
     {
         pose_.header.stamp = target.header.stamp;
-        pose_.pose = target.pose;
+        pose_.pose.position = target.pose.pose.position;
+        pose_.pose.orientation = target.pose.pose.orientation;
         twist_.header.stamp = target.header.stamp;
-        twist_.twist = target.twist;
+        twist_.twist = target.twist.twist;
     }
 }

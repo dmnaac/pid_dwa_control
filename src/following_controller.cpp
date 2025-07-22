@@ -2,13 +2,13 @@
 #include <cmath>
 #include <algorithm>
 #include <geometry_msgs/Twist.h>
-#include <tf/tf.h>.
+#include <tf/tf.h>
 
 #include "pid_dwa_control/following_controller.h"
 
 namespace FOLLOWING
 {
-    following_controller::following_controller(ros::NodeHandle nh) : nh_(nh), local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_), tf_listener_(tf_buffer_), laser_sub_(nh_, "/scan_master", 100), odom_sub_(nh_, "/odom", 100), target_(), last_target_(),
+    following_controller::following_controller(ros::NodeHandle nh) : nh_(nh), local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_), tf_listener_(tf_buffer_), laser_sub_(nh_, "/scan_master", 100), odom_sub_(nh_, "/odom", 100), target_(), last_target_()
     {
         local_nh_.param<bool>("enable_back", enable_back_, true);
         local_nh_.param<double>("max_linear_velocity", max_vel_x_, 0.2);
@@ -161,8 +161,8 @@ namespace FOLLOWING
             ROS_INFO_STREAM("Received new goal");
             dwa_planner_.set_obs_list(obs_list_);
 
-            double px = target_.pose_.pose.position.x;
-            double py = target_.pose_.pose.position.y;
+            double px = target_.getPose().pose.position.x;
+            double py = target_.getPose().pose.position.y;
             double vx = pid_vel_.linear.x;
             double vyaw = pid_vel_.angular.z;
             const Eigen::Vector3d goal(px, py, 0.0);
@@ -194,8 +194,8 @@ namespace FOLLOWING
         else
         {
             ROS_INFO_STREAM("Same goal");
-            double px = target_.pose_.pose.position.x;
-            double py = target_.pose_.pose.position.y;
+            double px = target_.getPose().pose.position.x;
+            double py = target_.getPose().pose.position.y;
             // const Eigen::Vector3d goal(px, py, tf::getYaw(target_msg.pose.pose.orientation));
             const Eigen::Vector3d goal(px, py, 0.0);
             transform_ = odomToTransform(odomMsg);
@@ -216,7 +216,7 @@ namespace FOLLOWING
                 Eigen::Vector3d updated_goal = relative_transform * goal;
                 cmd_vel_ = dwa_planner_.calc_cmd_vel(updated_goal);
                 cmd_vel_pub_.publish(cmd_vel_);
-                ROS_WARN_STREAM("Move to last goal: vx:" << cmd_vel_.linear_x << ", yaw: " << cmd_vel_.angualr.z);
+                ROS_WARN_STREAM("Move to last goal: vx:" << cmd_vel_.linear.x << ", yaw: " << cmd_vel_.angular.z);
                 last_cmd_vel_ = cmd_vel_;
             }
         }
