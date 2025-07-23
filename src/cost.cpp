@@ -21,7 +21,7 @@ namespace FOLLOWING
 
     void Cost::calc_total_cost()
     {
-        total_cost_ = obs_cost_ + goal_cost_ + direction_cost_ + speed_cost_ + path_cost_;
+        total_cost_ = obs_cost_ + goal_cost_ + speed_cost_ + path_cost_;
     }
 
     Cost::~Cost()

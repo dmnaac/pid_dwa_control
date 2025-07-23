@@ -463,7 +463,7 @@ namespace FOLLOWING
     {
         Cost cost;
         cost.goal_cost_ = calc_goal_cost(trajectory, goal);
-        cost.direction_cost_ = calc_direction_cost(trajectory, goal);
+        // cost.direction_cost_ = calc_direction_cost(trajectory, goal);
         cost.obs_cost_ = calc_obs_cost(trajectory);
         cost.speed_cost_ = calc_speed_cost(trajectory);
         cost.path_cost_ = 0.0;
@@ -593,7 +593,7 @@ namespace FOLLOWING
                     costs[i].goal_cost_ *= goal_cost_gain_;
                     costs[i].obs_cost_ *= obs_cost_gain_;
                     costs[i].speed_cost_ *= speed_cost_gain_;
-                    costs[i].direction_cost_ *= direction_cost_gain_;
+                    // costs[i].direction_cost_ *= direction_cost_gain_;
                     costs[i].calc_total_cost();
                     if (costs[i].total_cost_ < min_cost.total_cost_)
                     {
@@ -623,6 +623,7 @@ namespace FOLLOWING
         best_trajectory.first = dwa_planning(goal, trajectories);
         cmd_vel.linear.x = best_trajectory.first.front().vel_x_;
         cmd_vel.angular.z = best_trajectory.first.front().vel_yaw_;
+        best_trajectory_to_show_ = best_trajectory.first;
         return cmd_vel;
     }
 }

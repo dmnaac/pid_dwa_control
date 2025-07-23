@@ -62,8 +62,9 @@ namespace FOLLOWING
         void visualize_footprints(const std::vector<State> &trajectory, const ros::Publisher &pub);
 
         void visualize_trajectory(const std::vector<State> &trajectory, const ros::Publisher &pub);
-        void visualize_trajectories(
-            const std::vector<std::pair<std::vector<State>, bool>> &trajectories, const ros::Publisher &pub);
+        void visualize_trajectories(const std::vector<std::pair<std::vector<State>, bool>> &trajectories, const ros::Publisher &pub);
+
+        std::vector<State> best_trajectory_to_show_;
 
     private:
         ros::NodeHandle local_nh_;

@@ -21,7 +21,7 @@ namespace FOLLOWING
         twist_.twist.angular.y = 0.0;
         twist_.twist.angular.z = 0.0;
 
-        is_valid_ = false;
+        isValid_ = false;
     }
 
     Target::~Target()
@@ -50,5 +50,6 @@ namespace FOLLOWING
         pose_.pose.orientation = target.pose.pose.orientation;
         twist_.header.stamp = target.header.stamp;
         twist_.twist = target.twist.twist;
+        isValid_ = true;
     }
 }

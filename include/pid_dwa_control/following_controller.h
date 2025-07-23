@@ -59,10 +59,10 @@ namespace FOLLOWING
         tf2_ros::Buffer tf_buffer_;
         tf2_ros::TransformListener tf_listener_;
 
-        ros::Subscriber target_sub_;
         message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub_;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub_;
-        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry> SyncPolicy;
+        message_filters::Subscriber<spencer_tracking_msgs::TargetPerson> target_sub_;
+        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry, spencer_tracking_msgs::TargetPerson> SyncPolicy;
         std::shared_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
 
         Target target_;
@@ -74,13 +74,16 @@ namespace FOLLOWING
         Eigen::Isometry3d
         odomToTransform(const nav_msgs::Odometry::ConstPtr &odom);
 
+        bool has_reached_;
+        bool isTargetValid_;
+
     public:
         following_controller(ros::NodeHandle nh);
         ~following_controller();
 
         void create_obs_list(const sensor_msgs::LaserScan::ConstPtr &scan);
-        void target_register(const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg);
-        void target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const nav_msgs::Odometry::ConstPtr &odomMsg);
+        void calc_pid_vel(const spencer_tracking_msgs::TargetPerson target_msg);
+        void target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const nav_msgs::Odometry::ConstPtr &odomMsg, const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg);
         void spin();
     };
 }

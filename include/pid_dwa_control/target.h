@@ -24,7 +24,7 @@ namespace FOLLOWING
         ros::Time getTimestamp();
         void setTarget(const spencer_tracking_msgs::TargetPerson target);
 
-        bool is_valid_;
+        bool isValid_;
     };
 }
 

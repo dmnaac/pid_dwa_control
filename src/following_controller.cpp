@@ -6,9 +6,11 @@
 
 #include "pid_dwa_control/following_controller.h"
 
+const double EPSILON = 1e-9;
+
 namespace FOLLOWING
 {
-    following_controller::following_controller(ros::NodeHandle nh) : nh_(nh), local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_), tf_listener_(tf_buffer_), laser_sub_(nh_, "/scan_master", 100), odom_sub_(nh_, "/odom", 100), target_(), last_target_()
+    following_controller::following_controller(ros::NodeHandle nh) : nh_(nh), local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_), tf_listener_(tf_buffer_), laser_sub_(nh_, "/scan_master", 100), odom_sub_(nh_, "/odom", 100), target_sub_(nh_, "/mono_following/target", 100), target_(), last_target_(), has_reached_(false), isTargetValid_(false)
     {
         local_nh_.param<bool>("enable_back", enable_back_, true);
         local_nh_.param<double>("max_linear_velocity", max_vel_x_, 0.2);
@@ -25,11 +27,9 @@ namespace FOLLOWING
 
         predict_trajectory_pub_ = nh_.advertise<visualization_msgs::Marker>("/predict_trajectory", 1);
 
-        target_sub_ = nh_.subscribe("/mono_following/target", 100, &following_controller::target_register, this);
+        sync_ = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(SyncPolicy(100), laser_sub_, odom_sub_, target_sub_);
 
-        sync_ = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(SyncPolicy(100), laser_sub_, odom_sub_);
-
-        sync_->registerCallback(std::bind(&following_controller::target_callback, this, std::placeholders::_1, std::placeholders::_2));
+        sync_->registerCallback(std::bind(&following_controller::target_callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
         double rate = 10;
         control_dt_ = 1.0 / rate;
@@ -104,22 +104,8 @@ namespace FOLLOWING
         return transform;
     }
 
-    void following_controller::target_register(const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg)
+    void following_controller::calc_pid_vel(const spencer_tracking_msgs::TargetPerson target_msg)
     {
-        spencer_tracking_msgs::TargetPerson target_msg;
-        target_msg = *targetMsg;
-        if (target_msg.pose.pose.position.x == 0 || target_msg.pose.pose.position.x > 3.5)
-        {
-            cmd_vel_pub_.publish(geometry_msgs::Twist());
-            target_.is_valid_ = false;
-            return;
-        }
-        else
-        {
-            target_.setTarget(target_msg);
-            target_.is_valid_ = true;
-        }
-
         double px = target_msg.pose.pose.position.x;
         double py = target_msg.pose.pose.position.y;
         double rx = distance_;
@@ -147,16 +133,56 @@ namespace FOLLOWING
         }
     }
 
-    void following_controller::target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const nav_msgs::Odometry::ConstPtr &odomMsg)
+    void following_controller::target_callback(const sensor_msgs::LaserScan::ConstPtr &laserScanMsg, const nav_msgs::Odometry::ConstPtr &odomMsg, const spencer_tracking_msgs::TargetPerson::ConstPtr &targetMsg)
     {
-        if (!target_.is_valid_)
+        spencer_tracking_msgs::TargetPerson target_msg;
+        target_msg = *targetMsg;
+
+        if (std::fabs(target_msg.pose.pose.position.x) < EPSILON)
         {
+            ROS_WARN_STREAM("No valid target");
+            if (has_reached_)
+            {
+                cmd_vel_pub_.publish(geometry_msgs::Twist());
+                last_cmd_vel_ = geometry_msgs::Twist();
+                isTargetValid_ = false;
+                ROS_WARN_STREAM("Target is lost! Stop!");
+                return;
+            }
+            else
+            {
+                if (last_target_.isValid_)
+                {
+                    isTargetValid_ = false;
+                    ROS_WARN_STREAM("Move to last goal");
+                }
+                else
+                {
+                    cmd_vel_pub_.publish(geometry_msgs::Twist());
+                    last_cmd_vel_ = geometry_msgs::Twist();
+                    ROS_WARN_STREAM("No target is inialized!");
+                    return;
+                }
+            }
+        }
+        else if (target_msg.pose.pose.position.x > 3.5)
+        {
+            ROS_WARN_STREAM("Target is out of range");
+            cmd_vel_pub_.publish(geometry_msgs::Twist());
+            last_cmd_vel_ = geometry_msgs::Twist();
+            isTargetValid_ = false;
             return;
+        }
+        else
+        {
+            target_.setTarget(target_msg);
+            calc_pid_vel(target_msg);
+            isTargetValid_ = true;
         }
 
         following_controller::create_obs_list(laserScanMsg);
 
-        if (target_.getTimestamp() > last_target_.getTimestamp())
+        if (isTargetValid_)
         {
             ROS_INFO_STREAM("Received new goal");
             dwa_planner_.set_obs_list(obs_list_);
@@ -176,7 +202,7 @@ namespace FOLLOWING
                 ROS_INFO_STREAM("Execute PID velocity command: vx: " << vx << ", vyaw: " << vyaw);
                 last_cmd_vel_ = cmd_vel_;
 
-                dwa_planner_.visualize_trajectory(trajectory, predict_trajectory_pub_);
+                // dwa_planner_.visualize_trajectory(trajectory, predict_trajectory_pub_);
             }
             else
             {
@@ -187,15 +213,16 @@ namespace FOLLOWING
                 cmd_vel_pub_.publish(cmd_vel_);
                 ROS_INFO_STREAM("Execute DWA velocity command: vx: " << cmd_vel_.linear.x << ", vyaw: " << cmd_vel_.angular.z);
                 last_cmd_vel_ = cmd_vel_;
+
+                dwa_planner_.visualize_trajectory(dwa_planner_.best_trajectory_to_show_, predict_trajectory_pub_);
             }
 
             last_target_ = target_;
         }
         else
         {
-            ROS_INFO_STREAM("Same goal");
-            double px = target_.getPose().pose.position.x;
-            double py = target_.getPose().pose.position.y;
+            double px = last_target_.getPose().pose.position.x;
+            double py = last_target_.getPose().pose.position.y;
             // const Eigen::Vector3d goal(px, py, tf::getYaw(target_msg.pose.pose.orientation));
             const Eigen::Vector3d goal(px, py, 0.0);
             transform_ = odomToTransform(odomMsg);
@@ -206,11 +233,14 @@ namespace FOLLOWING
             double dist = (latest_position.segment(0, 2) - goal.segment(0, 2)).norm();
             if (dist < 0.1)
             {
+                has_reached_ = true;
                 ROS_WARN_STREAM("Target is lost! Stop!");
                 cmd_vel_pub_.publish(geometry_msgs::Twist());
+                last_cmd_vel_ = geometry_msgs::Twist();
             }
             else
             {
+                has_reached_ = false;
                 dwa_planner_.set_obs_list(obs_list_);
                 dwa_planner_.set_cur_cmd_vel(last_cmd_vel_);
                 Eigen::Vector3d updated_goal = relative_transform * goal;
@@ -218,6 +248,8 @@ namespace FOLLOWING
                 cmd_vel_pub_.publish(cmd_vel_);
                 ROS_WARN_STREAM("Move to last goal: vx:" << cmd_vel_.linear.x << ", yaw: " << cmd_vel_.angular.z);
                 last_cmd_vel_ = cmd_vel_;
+
+                dwa_planner_.visualize_trajectory(dwa_planner_.best_trajectory_to_show_, predict_trajectory_pub_);
             }
         }
     }
