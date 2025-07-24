@@ -27,6 +27,7 @@ namespace FOLLOWING
     {
     private:
         bool enable_back_;
+        bool enable_dwa_;
         double max_vel_x_;
         double max_vel_yaw_;
         double gain_vel_x_;

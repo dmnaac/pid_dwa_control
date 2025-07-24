@@ -19,6 +19,6 @@
         <param name="scan_angle_resolution" value="0.087"/>
     </node>
 
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find pid_dwa_control)/config/mono_tracking_ModelOnly.rviz" output="screen"/>
+    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find pid_dwa_control)/config/mono_tracking_ModelOnly.rviz" output="screen"/> -->
 
 </launch>

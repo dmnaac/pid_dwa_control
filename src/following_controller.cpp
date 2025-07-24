@@ -13,6 +13,7 @@ namespace FOLLOWING
     following_controller::following_controller(ros::NodeHandle nh) : nh_(nh), local_nh_("~"), scale_vel_x_(2.0), scale_vel_yaw_(2.5), target_id_(-1), dwa_planner_(local_nh_), tf_listener_(tf_buffer_), laser_sub_(nh_, "/scan_master", 100), odom_sub_(nh_, "/odom", 100), target_sub_(nh_, "/mono_following/target", 100), target_(), last_target_(), has_reached_(false), isTargetValid_(false)
     {
         local_nh_.param<bool>("enable_back", enable_back_, true);
+        local_nh_.param<bool>("enable_dwa", enable_dwa_, true);
         local_nh_.param<double>("max_linear_velocity", max_vel_x_, 0.2);
         local_nh_.param<double>("max_angular_velocity", max_vel_yaw_, 0.5);
         local_nh_.param<double>("gain_linear_velocity", gain_vel_x_, 0.3);
