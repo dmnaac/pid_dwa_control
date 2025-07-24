@@ -1,0 +1,14 @@
+<launch>
+    <node pkg="move_base" type="move_base" name="move_base">
+        <param name="base_global_planner" value="global_planner/GlobalPlanner" />
+        <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+        <rosparam file="$(find pid_dwa_control)/config/move_base_config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find pid_dwa_control)/config/move_base_config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find pid_dwa_control)/config/move_base_config/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find pid_dwa_control)/config/move_base_config/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find pid_dwa_control)/config/move_base_config/move_base_params.yaml" command="load" />
+        <rosparam file="$(find pid_dwa_control)/config/move_base_config/dwa_local_planner_params.yaml" command="load" />
+        <rosparam file="$(find pid_dwa_control)/config/move_base_config/base_global_planner_params.yaml" command="load" />
+        <remap from="cmd_vel" to="cmd_vel_x" />
+    </node>
+</launch>
