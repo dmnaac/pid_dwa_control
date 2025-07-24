@@ -179,6 +179,7 @@ namespace FOLLOWING
             target_.setTarget(target_msg);
             calc_pid_vel(target_msg);
             isTargetValid_ = true;
+            has_reached_ = false;
         }
 
         following_controller::create_obs_list(laserScanMsg);
@@ -218,7 +219,7 @@ namespace FOLLOWING
                 dwa_planner_.visualize_trajectory(dwa_planner_.best_trajectory_to_show_, predict_trajectory_pub_);
             }
 
-            last_target_ = target_;
+            last_target_.setTarget(target_msg);
         }
         else
         {

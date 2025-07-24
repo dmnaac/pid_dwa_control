@@ -14,7 +14,7 @@
         <param name="max_angular_velocity" value="0.5"/>
         <param name="gain_linear_velocity" value="0.6"/>
         <param name="gain_angular_velocity" value="2.5"/>
-        <param name="distance" value="1.5"/>
+        <param name="distance" value="2.0"/>
         <param name="timeout" value="1.0"/>
         <param name="scan_angle_resolution" value="0.087"/>
     </node>
